@@ -28,11 +28,21 @@ deploy/         部署与工作流定义（BPMN）
 
    若在执行 Compose 时看到 `Cannot connect to the Docker daemon` 等错误，即表示守护进程未启动，需要先按上述方式启动后再重试。
 
-2. 克隆仓库后在根目录执行：
+2. 克隆仓库后在根目录执行 Compose 编排。根据本地 Docker 版本选择以下任一命令：
 
-   ```bash
-   docker compose -f deploy/docker-compose.yml up --build
-   ```
+   - Docker Compose **V2（`docker compose` 子命令）**：
+
+     ```bash
+     docker compose -f deploy/docker-compose.yml up --build
+     ```
+
+   - 传统的 **docker-compose 可执行文件（V1）**：
+
+     ```bash
+     docker-compose -f deploy/docker-compose.yml up --build
+     ```
+
+   若执行 `docker compose` 时提示 `unknown shorthand flag: 'f' in -f`，说明当前 Docker 客户端尚未启用 Compose V2，请改用 `docker-compose` 命令或升级 Docker 版本。
 
    该命令会启动以下容器：
 
