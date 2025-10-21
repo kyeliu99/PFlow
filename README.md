@@ -28,7 +28,24 @@ deploy/         部署与工作流定义（BPMN）
 
    若在执行 Compose 时看到 `Cannot connect to the Docker daemon` 等错误，即表示守护进程未启动，需要先按上述方式启动后再重试。
 
-2. 克隆仓库后在根目录执行 Compose 编排。根据本地 Docker 版本选择以下任一命令：
+2. 克隆仓库后在根目录执行 Compose 编排。**首次使用前请确认已安装 Docker Compose V2**：
+
+   - 推荐在 Linux 上安装官方 Compose 插件：
+
+     ```bash
+     sudo apt-get remove docker-compose  # 如曾通过 apt 安装 python2 版本需先卸载
+     sudo apt-get update
+     sudo apt-get install docker-compose-plugin
+     docker compose version
+     ```
+
+     以上命令会安装 `docker compose` 子命令（基于 Go 的 V2 版本），避免 `AttributeError: 'module' object has no attribute 'unique'` 等由于旧版 Python Compose 引起的报错。
+
+   - macOS/Windows 用户使用 Docker Desktop 会自带 Compose V2，无需额外安装。
+
+   - 如仍需使用 legacy `docker-compose` 二进制，请确保是 1.29+ 版本，并安装在 Python 3 环境下。
+
+   安装完成后，根据本地 Docker 版本选择以下任一命令启动：
 
    - Docker Compose **V2（`docker compose` 子命令）**：
 
