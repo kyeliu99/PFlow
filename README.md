@@ -97,9 +97,38 @@ deploy/         部署与工作流定义（BPMN）
 
    然后在 `backend/` 内执行：
 
-   ```bash
-   go run ./cmd/api
-   ```
+  ```bash
+  go run ./cmd/api
+  ```
+
+### 常见问题
+
+- **`error getting credentials - err: exit status 1, out: GDBus.Error:org.freedesktop.DBus.Error.ServiceUnknown`**
+
+  该报错表示 Docker CLI 尝试通过桌面凭据管理器存取镜像仓库凭据，但当前 Linux 服务器并未提供 `org.freedesktop.secrets` 服务。常见解决方案：
+
+  1. **安装兼容的凭据守护进程**（如 `gnome-keyring` 或 `pass`）：
+
+     ```bash
+     sudo apt-get install gnome-keyring  # Debian/Ubuntu
+     # 或者
+     sudo apt-get install pass           # 轻量级 GPG 驱动
+     ```
+
+     安装后重新登录 Shell（或执行 `eval $(/usr/bin/gnome-keyring-daemon --start --components=secrets)`）再执行 `docker compose ...`。
+
+  2. **在当前主机禁用凭据存储**，避免 Docker 请求缺失的 Secret Service。可临时覆盖 Docker 配置：
+
+     ```bash
+     mkdir -p ~/.docker
+     cat > ~/.docker/config.json <<'EOF'
+     {
+       "auths": {}
+     }
+     EOF
+     ```
+
+     如原先配置存在 `"credsStore"`/`"credHelpers"` 字段，请移除后再尝试。该方式会改为在本地 `config.json` 中以明文保存凭据，请结合安全要求选用。
 
 ## Camunda 工作流说明
 
