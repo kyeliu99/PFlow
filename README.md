@@ -21,7 +21,14 @@ deploy/         部署与工作流定义（BPMN）
 
 > **提示**：由于本环境无法联网，`go mod tidy`/`npm install` 需在可访问公网的机器执行，以拉取依赖。
 
-1. 克隆仓库后在根目录执行：
+1. **确保本机已安装 Docker / Docker Compose 且守护进程已启动。**
+
+   - macOS/Windows 用户请先启动 Docker Desktop；
+   - Linux 用户可执行 `sudo systemctl start docker` 或参考发行版文档启动 `dockerd`。
+
+   若在执行 Compose 时看到 `Cannot connect to the Docker daemon` 等错误，即表示守护进程未启动，需要先按上述方式启动后再重试。
+
+2. 克隆仓库后在根目录执行：
 
    ```bash
    docker compose -f deploy/docker-compose.yml up --build
@@ -35,9 +42,9 @@ deploy/         部署与工作流定义（BPMN）
    - `api`：Go 工单服务，监听 `http://localhost:8080`
    - `frontend`：打包后的前端，监听 `http://localhost:5173`
 
-2. 打开浏览器访问 [http://localhost:5173](http://localhost:5173) 体验前端，创建工单后可提交审批并在不同状态之间流转。
+3. 打开浏览器访问 [http://localhost:5173](http://localhost:5173) 体验前端，创建工单后可提交审批并在不同状态之间流转。
 
-3. 若需要在本地调试 Go 服务，可单独启动依赖：
+4. 若需要在本地调试 Go 服务，可单独启动依赖：
 
    ```bash
    docker compose -f deploy/docker-compose.yml up db camunda rabbitmq
