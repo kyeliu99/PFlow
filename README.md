@@ -47,6 +47,18 @@ deploy/         部署与工作流定义（BPMN）
 
      以上命令会安装 `docker compose` 子命令（基于 Go 的 V2 版本），避免 `AttributeError: 'module' object has no attribute 'unique'` 等由于旧版 Python Compose 引起的报错。
 
+     如果你的发行版仓库长期未提供 `docker-compose-plugin`（例如某些企业内网镜像站），可直接下载官方发布的二进制并手动安装：
+
+     ```bash
+     sudo mkdir -p /usr/local/lib/docker/cli-plugins
+     sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.7/docker-compose-$(uname -s)-$(uname -m)" \
+       -o /usr/local/lib/docker/cli-plugins/docker-compose
+     sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+     docker compose version
+     ```
+
+     如目标机器无法直接访问 GitHub，可先在可联网环境下载相应的 `docker-compose-<OS>-<ARCH>` 文件后，通过离线方式拷贝到上述目录，仍然保持可执行权限即可。
+
    - macOS/Windows 用户使用 Docker Desktop 会自带 Compose V2，无需额外安装。
 
    - 如仍需使用 legacy `docker-compose` 二进制，请确保是 1.29+ 版本，并安装在 Python 3 环境下。
