@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+             targetNamespace="http://example.com/pflow">
+  <process id="ticket_approval" name="Ticket Approval" isExecutable="true">
+    <startEvent id="StartEvent" name="Ticket Submitted">
+      <outgoing>Flow_SubmittedToApproval</outgoing>
+    </startEvent>
+    <userTask id="UserTask_ManagerApproval" name="Manager Approval" camunda:candidateGroups="managers">
+      <incoming>Flow_SubmittedToApproval</incoming>
+      <outgoing>Flow_ApprovalToDecision</outgoing>
+    </userTask>
+    <exclusiveGateway id="Gateway_Decision" name="Approved?">
+      <incoming>Flow_ApprovalToDecision</incoming>
+      <outgoing>Flow_ApprovedToService</outgoing>
+      <outgoing>Flow_RejectedToEnd</outgoing>
+    </exclusiveGateway>
+    <sequenceFlow id="Flow_SubmittedToApproval" sourceRef="StartEvent" targetRef="UserTask_ManagerApproval"/>
+    <sequenceFlow id="Flow_ApprovalToDecision" sourceRef="UserTask_ManagerApproval" targetRef="Gateway_Decision"/>
+    <sequenceFlow id="Flow_ApprovedToService" sourceRef="Gateway_Decision" targetRef="ServiceTask_ProcessTicket">
+      <conditionExpression xsi:type="tFormalExpression">
+        ${approved}
+      </conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_RejectedToEnd" sourceRef="Gateway_Decision" targetRef="EndEvent_Rejected">
+      <conditionExpression xsi:type="tFormalExpression">
+        ${!approved}
+      </conditionExpression>
+    </sequenceFlow>
+    <serviceTask id="ServiceTask_ProcessTicket" name="Provision Service" camunda:type="external" camunda:topic="ticket-processing">
+      <incoming>Flow_ApprovedToService</incoming>
+      <outgoing>Flow_ServiceToEnd</outgoing>
+    </serviceTask>
+    <endEvent id="EndEvent_Rejected" name="Rejected">
+      <incoming>Flow_RejectedToEnd</incoming>
+    </endEvent>
+    <endEvent id="EndEvent_Completed" name="Completed">
+      <incoming>Flow_ServiceToEnd</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_ServiceToEnd" sourceRef="ServiceTask_ProcessTicket" targetRef="EndEvent_Completed"/>
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_ticket">
+    <bpmndi:BPMNPlane id="BPMNPlane_ticket" bpmnElement="ticket_approval">
+      <bpmndi:BPMNShape id="Shape_StartEvent" bpmnElement="StartEvent">
+        <dc:Bounds x="120" y="120" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_UserTask" bpmnElement="UserTask_ManagerApproval">
+        <dc:Bounds x="220" y="98" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway" bpmnElement="Gateway_Decision">
+        <dc:Bounds x="380" y="113" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_ServiceTask" bpmnElement="ServiceTask_ProcessTicket">
+        <dc:Bounds x="500" y="98" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndRejected" bpmnElement="EndEvent_Rejected">
+        <dc:Bounds x="380" y="220" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndCompleted" bpmnElement="EndEvent_Completed">
+        <dc:Bounds x="660" y="120" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>
