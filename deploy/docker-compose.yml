@@ -1,0 +1,65 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pflow
+      POSTGRES_USER: pflow
+      POSTGRES_PASSWORD: pflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - pflow-postgres:/var/lib/postgresql/data
+
+  camunda:
+    image: camunda/camunda-bpm-platform:run-latest
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "8081:8080"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  api:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    depends_on:
+      - db
+      - camunda
+      - rabbitmq
+    environment:
+      DATABASE_URL: postgres://pflow:pflow@db:5432/pflow?sslmode=disable
+      CAMUNDA_URL: http://camunda:8080/engine-rest
+      CAMUNDA_PROCESS_KEY: ticket_approval
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      RABBITMQ_TICKET_EXCHANGE: ticket.events
+      RABBITMQ_TICKET_QUEUE: ticket.events.queue
+      API_HTTP_PORT: :8080
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      - api
+    environment:
+      VITE_API_URL: http://api:8080
+    ports:
+      - "5173:80"
+
+volumes:
+  pflow-postgres:
