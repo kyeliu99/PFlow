@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	_ "embed"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	workflows "github.com/example/pflow/backend/deploy/workflows"
 	"github.com/example/pflow/backend/internal/config"
 	"github.com/example/pflow/backend/internal/db"
 	httpserver "github.com/example/pflow/backend/internal/http"
@@ -23,9 +23,6 @@ import (
 	"github.com/example/pflow/backend/internal/worker"
 	"github.com/example/pflow/backend/internal/workflow"
 )
-
-//go:embed ../../deploy/workflows/ticket-process.bpmn
-var ticketProcess []byte
 
 func main() {
 	cfg := config.Load()
@@ -43,8 +40,8 @@ func main() {
 	}
 	camundaClient := workflow.NewCamundaClient(cfg.CamundaURL)
 
-	if len(ticketProcess) > 0 {
-		if err := camundaClient.DeployProcess(context.Background(), "ticket-process", ticketProcess); err != nil {
+	if len(workflows.TicketProcess) > 0 {
+		if err := camundaClient.DeployProcess(context.Background(), "ticket-process", workflows.TicketProcess); err != nil {
 			log.Printf("deploy workflow failed: %v", err)
 		} else {
 			log.Println("workflow deployed to camunda")
