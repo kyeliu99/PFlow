@@ -1,0 +1,63 @@
+vmType: "qemu"
+cpus: 4
+memory: "6GiB"
+disk: "50GiB"
+mounts:
+  - location: ..
+    writable: true
+    9p:
+      securityModel: passthrough
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -euxo pipefail
+
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update
+      apt-get install -y apt-transport-https ca-certificates curl software-properties-common gnupg lsb-release
+
+      install -m 0755 -d /etc/apt/keyrings
+      if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      fi
+      chmod a+r /etc/apt/keyrings/docker.gpg
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+
+      curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+
+      apt-get update
+      apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin nodejs make git postgresql-client
+
+      TARGET_USER="${LIMA_CIDATA_USER:-ubuntu}"
+      if ! id "$TARGET_USER" >/dev/null 2>&1; then
+        TARGET_USER=$(getent passwd 1000 | cut -d: -f1)
+      fi
+      if [ -n "$TARGET_USER" ]; then
+        usermod -aG docker "$TARGET_USER"
+      fi
+
+      GO_VERSION=1.21.5
+      GO_ARCH=$(uname -m)
+      case "$GO_ARCH" in
+        x86_64) GO_ARCH=amd64 ;;
+        aarch64|arm64) GO_ARCH=arm64 ;;
+      esac
+      if [ ! -x /usr/local/go/bin/go ] || [ "$(/usr/local/go/bin/go version | awk '{print $3}')" != "go${GO_VERSION}" ]; then
+        rm -rf /usr/local/go
+        curl -fsSL https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz | tar -C /usr/local -xz
+      fi
+      cat >/etc/profile.d/go-path.sh <<PROFILE
+export PATH=/usr/local/go/bin:\$PATH
+export GOPATH=/home/${TARGET_USER:-ubuntu}/go
+PROFILE
+
+      npm install -g pnpm
+
+      systemctl enable docker
+      systemctl start docker
+
+      if [ -n "$TARGET_USER" ]; then
+        chown -R "$TARGET_USER":"$TARGET_USER" "/home/$TARGET_USER"
+      fi
+

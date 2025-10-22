@@ -89,17 +89,100 @@ deploy/         部署与工作流定义（BPMN）
 
 3. 打开浏览器访问 [http://localhost:5173](http://localhost:5173) 体验前端，创建工单后可提交审批并在不同状态之间流转。
 
-4. 若需要在本地调试 Go 服务，可单独启动依赖：
+4. 若需要在本地调试 Go/前端代码，可参考下述“本地调试流程”小节。
+
+### 本地调试流程
+
+当你需要单步调试、打断点或对代码做热更新时，可将 Compose 作为依赖容器编排，业务代码在宿主机直接运行：
+
+1. **启动依赖容器（Camunda、PostgreSQL、RabbitMQ）**
 
    ```bash
-   docker compose -f deploy/docker-compose.yml up db camunda rabbitmq
+   docker compose -f deploy/docker-compose.yml up -d db camunda rabbitmq
    ```
 
-   然后在 `backend/` 内执行：
+   - `-d` 表示后台运行，便于在当前终端继续执行其他命令；
+   - 若需查看容器日志，可使用 `docker compose logs -f camunda` 等命令。
 
-  ```bash
-  go run ./cmd/api
-  ```
+2. **准备后端环境并运行 API**
+
+   ```bash
+   cd backend
+   go mod download        # 首次或依赖变更时执行
+   export DATABASE_URL="postgres://pflow:pflow@localhost:5432/pflow?sslmode=disable"
+   export CAMUNDA_URL="http://localhost:8081/engine-rest"
+   export CAMUNDA_PROCESS_KEY="ticket_approval"
+   export RABBITMQ_URL="amqp://guest:guest@localhost:5672/"
+   export RABBITMQ_TICKET_EXCHANGE="ticket.events"
+   export RABBITMQ_TICKET_QUEUE="ticket.events.queue"
+   export API_HTTP_PORT=":8080"
+   go run ./cmd/api
+   ```
+
+   如需断点调试，可将 `go run` 替换为 IDE/`dlv` 等工具。服务启动后会自动部署 BPMN 模型并监听 `http://localhost:8080`。
+
+3. **运行前端 Dev Server（带实时刷新与接口代理）**
+
+   ```bash
+   cd frontend
+   npm install           # 首次执行
+   VITE_API_URL="http://localhost:8080" npm run dev -- --host
+   ```
+
+   - `VITE_API_URL` 会传递到 Vite 代理，确保 `/api` 请求转发到本地 Go 服务；
+   - `--host` 选项便于在局域网或虚拟机下通过 IP 访问。
+
+   Dev Server 默认监听 `http://localhost:5173`，前端代码保存后浏览器会自动刷新。
+
+4. **停用环境**
+
+   当调试结束后，可通过以下命令停止依赖容器并清理资源：
+
+   ```bash
+   docker compose -f deploy/docker-compose.yml down
+   ```
+
+如需在容器中调试，可直接进入对应容器执行命令，例如 `docker compose exec api sh`。
+
+### macOS 虚拟环境（Lima）
+
+若希望在 macOS 上完全隔离开发环境、避免直接在宿主机安装 Docker/Golang/Node.js，可以借助 [Lima](https://github.com/lima-vm/lima) 启动一台轻量级的 Linux 虚拟机。仓库在 `ops/mac-dev/lima.yaml` 中提供了开箱即用的配置，VM 内已预置 Docker、Docker Compose、Go 1.21、Node.js 18 以及常用的 CLI 依赖。
+
+1. **安装 Lima 与（可选的）CLI 辅助工具**
+
+   ```bash
+   brew install lima jq
+   ```
+
+   Lima 使用 macOS 自带的虚拟化框架，Apple Silicon 与 Intel Mac 均可使用。
+
+2. **启动虚拟机并挂载当前仓库**
+
+   ```bash
+   # 在仓库根目录执行
+   limactl start --name pflow-dev ops/mac-dev/lima.yaml
+   ```
+
+   首次执行会下载 Ubuntu 云镜像并完成一次性初始化。初始化脚本会自动安装 Docker、Go、Node.js、pnpm 等依赖，并将当前仓库挂载到 `/mnt/lima/source/PFlow`。
+
+3. **进入虚拟机执行开发命令**
+
+   ```bash
+   limactl shell pflow-dev
+   cd /mnt/lima/source/PFlow
+   docker compose -f deploy/docker-compose.yml up --build
+   ```
+
+   后续即可在 VM 中运行所有 `docker compose`、`go run`、`npm run dev` 等命令。若需要使用 VS Code Remote - SSH，可通过 `limactl ssh pflow-dev` 获取 SSH 会话。
+
+4. **关闭或删除虚拟机**
+
+   ```bash
+   limactl stop pflow-dev          # 停止但保留 VM
+   limactl delete pflow-dev        # 删除 VM（下次需重新初始化）
+   ```
+
+> **提示**：如需调整虚拟机 CPU/内存、镜像或挂载路径，可编辑 `ops/mac-dev/lima.yaml`；Apple Silicon 用户默认会自动拉取 ARM64 镜像，无需额外配置。
 
 ### 常见问题
 
