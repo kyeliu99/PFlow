@@ -2,10 +2,9 @@
 
 FROM node:20 AS build
 WORKDIR /app
-COPY package.json .
-COPY package-lock.json .
+COPY frontend/package.json frontend/package-lock.json ./
 RUN npm install || npm install --no-package-lock
-COPY . .
+COPY frontend/. ./
 RUN npm run build
 
 FROM nginx:1.25
