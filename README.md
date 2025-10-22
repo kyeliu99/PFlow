@@ -128,7 +128,22 @@ deploy/         部署与工作流定义（BPMN）
      EOF
      ```
 
-     如原先配置存在 `"credsStore"`/`"credHelpers"` 字段，请移除后再尝试。该方式会改为在本地 `config.json` 中以明文保存凭据，请结合安全要求选用。
+    如原先配置存在 `"credsStore"`/`"credHelpers"` 字段，请移除后再尝试。该方式会改为在本地 `config.json` 中以明文保存凭据，请结合安全要求选用。
+
+- **`failed to load cache key: docker/dockerfile:1 ... connect: connection refused`**
+
+  这是 Docker BuildKit 默认尝试从 Docker Hub 拉取 `docker/dockerfile:1` 前端镜像时被防火墙拦截导致的。解决方式：
+
+  1. **确保已经在目标主机预先导入该镜像**（例如在可联网机器执行 `docker pull docker/dockerfile:1 && docker save docker/dockerfile:1 > dockerfile.tar`，然后离线导入 `docker load < dockerfile.tar`）。
+  2. 或者在离线环境暂时禁用 BuildKit，以旧版 builder 解析 Dockerfile：
+
+     ```bash
+     DOCKER_BUILDKIT=0 docker compose -f deploy/docker-compose.yml up --build
+     ```
+
+     本仓库的 Dockerfile 已移除 `# syntax=docker/dockerfile:1` 指令，禁用 BuildKit 后会完全依赖本地缓存，不再访问公网。
+
+  如仍需使用 BuildKit，也可以通过 `docker buildx create --use` 搭建企业内私有 registry 的前端镜像镜像源，确保 `docker/dockerfile:1` 可在内网获取。
 
 ## Camunda 工作流说明
 
